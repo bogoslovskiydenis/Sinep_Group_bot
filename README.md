@@ -25,7 +25,7 @@ FIREBASE_APP_ID=ваш_app_id
 2. Создайте новый проект или выберите существующий
 3. Перейдите в **Firestore Database**
 4. Создайте базу данных в тестовом режиме
-5. Скопируйте конфигурацию из **Project Settings → General → Your apps**
+5. Скопируйте конфигурацию из **Project Overview → Project settings → Your apps**
 
 ### 3. Telegram Bot Token
 1. Найдите [@BotFather](https://t.me/botfather) в Telegram
