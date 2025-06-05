@@ -2,10 +2,13 @@ import TelegramBot from 'node-telegram-bot-api';
 import dotenv from 'dotenv';
 import {setupErrorHandlers} from "./utils/errorHandler.js";
 import UserService from './services/userService.js';
+import {handleCallbackQuery} from './handlers/callbackHandler.js';
+import {handleContact} from './handlers/contactHandler.js';
+import {handleMessage} from './handlers/messageHandler.js';
+import {handleStart} from "./handlers/startHandler.js";
 
 dotenv.config();
 
-// Проверяем наличие токена
 const token = process.env.BOT_TOKEN;
 if (!token) {
     console.error('❌ BOT_TOKEN не найден');
@@ -13,48 +16,36 @@ if (!token) {
 }
 
 const bot = new TelegramBot(token, {polling: true});
-const userService = new UserService();
 
+let userService;
+try {
+    userService = new UserService();
+    console.log('✅ UserService инициализирован');
+} catch (error) {
+    console.error('❌ Ошибка инициализации UserService:', error.message);
+    process.exit(1);
+}
+
+const userLanguages = new Map();
+const userStates = new Map();
+const userServices = new Map();
 
 bot.onText(/\/start/, async (msg) => {
-    const chatId = msg.chat.id;
-    const firstName = msg.from.first_name || 'Пользователь';
+    await handleStart(bot, msg, userService, userStates, userLanguages);
+});
 
-    console.log(`👤 Пользователь ${firstName} (ID: ${msg.from.id}) запустил бота`);
+bot.on('callback_query', async (query) => {
+    await handleCallbackQuery(bot, query, userService, userStates, userLanguages, userServices);
+});
 
-    // Сохраняем пользователя в Firebase
-    try {
-        const userData = {
-            id: msg.from.id,
-            username: msg.from.username,
-            first_name: msg.from.first_name,
-            language_code: msg.from.language_code,
-        };
+bot.on('contact', async (msg) => {
+    await handleContact(bot, msg, userService, userStates, userLanguages);
+});
 
-        const result = await userService.saveUser(userData);
-
-        if (result.success) {
-            console.log(`✅ Пользователь ${firstName} успешно сохранен в Firebase`);
-        } else {
-            console.error(`❌ Ошибка сохранения пользователя ${firstName}:`, result.error);
-        }
-    } catch (error) {
-        console.error('❌ Критическая ошибка при сохранении пользователя:', error.message);
-    }
-
-    const welcomeMessage = `
-Привет, ${firstName}! 👋
-Добро пожаловать в Sinep Group Bot!
-
-Выберите язык интерфейса:
-🇺🇦 Українська
-🇷🇺 Русский  
-🇬🇧 English
-  `;
-
-    bot.sendMessage(chatId, welcomeMessage);
+bot.on('message', async (msg) => {
+    await handleMessage(bot, msg, userService, userStates, userLanguages, userServices);
 });
 
 setupErrorHandlers(bot);
 
-console.log('✅ Бот запущен');
+console.log('🚀 Sinep Group Bot запущен успешно!');
